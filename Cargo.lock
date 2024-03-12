@@ -52,7 +52,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "jtagice-mkii"
+name = "jtagice_mkii"
 version = "0.1.0"
 dependencies = [
  "byteorder",

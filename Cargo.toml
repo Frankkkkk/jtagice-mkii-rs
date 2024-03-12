@@ -1,7 +1,16 @@
 [package]
-name = "jtagice-mkii"
+name = "jtagice_mkii"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "A simple client for AVRice MKII JTAG debuggers"
+documentation = "https://docs.rs/jtagice_mkii"
+homepage = "https://github.com/Frankkkkk/jtagice-mkii-rs"
+repository = "https://github.com/Frankkkkk/jtagice-mkii-rs"
+keywords = ["avrice", "avrice-mkii", "mkii", "jtagice", "jtagice-mkii"]
+categories = ["API bindings"]
+
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
