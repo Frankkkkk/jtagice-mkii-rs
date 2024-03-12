@@ -1,3 +1,27 @@
+//! JTAGICE mkII rust implementation
+//!
+//! This crate implements the JTAGICE mkII protocol.
+//!
+//! ## Usage
+//! Using this library is rather easy:
+//! ```
+//! let port = serialport::new("/dev/ttyUSB0", 19200)
+//!            .data_bits(serialport::DataBits::Eight)
+//!            .parity(serialport::Parity::None)
+//!            .stop_bits(serialport::StopBits::One)
+//!            .timeout(Duration::from_secs(8))
+//!            .open()
+//!            .expect("Failed to open port");
+//!
+//! let mut dgr = JtagIceMkii::new(port);
+//!
+//! let _ = dgr.sign_on();
+//! dgr.sign_on().expect("Couldn't sign on");
+//!
+//! //Set bd rate to 115200
+//! println!(">>> Will set baud rate");
+//! ```
+
 use byteorder::{ByteOrder, LittleEndian};
 use serialport::SerialPort;
 use std::fmt;
@@ -10,6 +34,7 @@ mod crc16;
 
 #[derive(Debug)]
 #[allow(dead_code)]
+/// The various commands that the device can accept
 pub enum Commands {
     MessageStart = 0x1b,
     Token = 0x0e,
@@ -28,6 +53,7 @@ pub enum Commands {
 }
 
 #[derive(Debug)]
+/// The replies that the device will send after each command
 pub enum Replies {
     Ok = 0x80,
     Parameter = 0x81,
@@ -127,17 +153,19 @@ impl JtagIceMkiiReply {
         Ok(cmd)
     }
 }
-
+/// A JtagIce mkII device
 pub struct JtagIceMkii<'a> {
     pub port: Box<dyn 'a + SerialPort>,
     pub seqno: u16,
 }
 
 impl<'a> JtagIceMkii<'_> {
+    /// creates a new device from a serial port
     pub fn new(port: Box<dyn SerialPort>) -> JtagIceMkii<'a> {
         JtagIceMkii { port, seqno: 0 }
     }
 
+    /// Signs on the device
     pub fn sign_on(&mut self) -> Result<JtagIceMkiiReply, JtagIceMkiiError> {
         self.send_cmd(&[Commands::GetSignOn as u8]);
         let result = match self.recv_result() {
@@ -151,6 +179,8 @@ impl<'a> JtagIceMkii<'_> {
         }
     }
 
+    /// Reads a RAM byte from the embedded device connected to the JTAGICE probe
+    /// Behid the scenes uses the `Commands::ReadMemory` instruction
     pub fn read_ram_byte(&mut self, mem_addr: u16) -> Result<u8, JtagIceMkiiError> {
         const NUM_BYTES_TO_READ: u16 = 1;
 
@@ -181,6 +211,8 @@ impl<'a> JtagIceMkii<'_> {
         Ok(rcv.data[0])
     }
 
+    /// Writes a RAM byte from the embedded device connected to the JTAGICE probe
+    /// Behid the scenes uses the `Commands::WriteMemory` instruction
     pub fn write_ram_byte(&mut self, mem_addr: u16, value: u8) -> Result<(), JtagIceMkiiError> {
         const NUM_BYTES_TO_WRITE: u16 = 1;
 
@@ -212,10 +244,12 @@ impl<'a> JtagIceMkii<'_> {
         }
     }
 
+    /// Increases the sequence number. Should be increased by the client after each new command
     pub fn increase_seqno(&mut self) {
         self.seqno += 1;
     }
 
+    /// Sends a command to the device.
     pub fn send_cmd(&mut self, data: &[u8]) {
         let cmd = JtagIceMkiiCommand {
             seqno: self.seqno,
@@ -227,6 +261,7 @@ impl<'a> JtagIceMkii<'_> {
         self.port.write(&raw_cmd).unwrap(); // XXX Return an error
     }
 
+    /// Receives a result from the JTAG device
     pub fn recv_result(&mut self) -> Result<JtagIceMkiiReply, JtagIceMkiiError> {
         let mut raw_data: Vec<u8> = vec![0; 0];
         let mut total_data_length: usize = 6; // read at least 6 char (that contain the size)
